@@ -215,8 +215,10 @@
                 })
 
                 document.documentElement.onmousemove = function (e) {
-                    dragItem.style.left = e.pageX - disX + 'px'
-                    dragItem.style.top = e.pageY - disY + 'px'
+                    requestAnimationFrame(() => {
+                        dragItem.style.left = e.pageX - disX + 'px'
+                        dragItem.style.top = e.pageY - disY + 'px'
+                    })
                 }
                 document.documentElement.onmouseup = function (e) {
                     clearTimeout(timer)
