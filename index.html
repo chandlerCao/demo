@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        #box {
+            display: grid;
+            width: 1000px;
+            height: 600px;
+            margin: 0 auto;
+            grid-template-columns: repeat(var(--cols), calc(100% / var(--cols)));
+            grid-template-rows: repeat(var(--rows), calc(100% / var(--rows)));
+        }
+
+        .item {
+            display: flex;
+            position: relative;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .block {
+            width: 140px;
+            height: 140px;
+            line-height: 140px;
+            font-size: 70px;
+            background-color: #409eff;
+            border-radius: 50%;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            transform: translateX(0) translateY(0);
+        }
+
+        .block.trs,
+        .item.dragItem.trs {
+            transition: .3s;
+        }
+
+        .item.hide {
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrap">
+        <button v-for="pos in btns" class="changeBtn" :data-x="pos.x" :data-y="pos.y">{{pos.x}}*{{pos.y}}</button>
+        <div id="box">
+            <div v-for="item in list" class="item" :id="`item${item}`">
+                <div class="block">{{item}}</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const fd = (fn, delay) => {
+            let timer = null
+            return function () {
+                clearTimeout(timer)
+                timer = setTimeout(() => {
+                    fn.call(this, ...arguments)
+                }, delay);
+            }
+        }
+    </script>
+    <script>
+        var arr = JSON.parse(localStorage.getItem('arr')) || [1, 2, 3, 4, 5, 6, 7, 8]
+        const btnList = [
+            { x: 2, y: 4 },
+            { x: 2, y: 5 },
+            { x: 3, y: 3 },
+            { x: 3, y: 4 },
+            { x: 4, y: 4 },
+            { x: 4, y: 5 },
+        ]
+        const grid = JSON.parse(localStorage.getItem('grid')) || {}
+        document.body.style.setProperty('--rows', grid.x || btnList[0].x);
+        document.body.style.setProperty('--cols', grid.y || btnList[0].y);
+        new Vue({
+            el: '#wrap',
+            data: {
+                list: arr,
+                btns: btnList
+            },
+        })
+        const items = document.getElementsByClassName('item');
+        const block = document.getElementsByClassName('block');
+
+        let posArr = []
+
+        const $items = $(items)
+        const $block = $(block)
+        for (let i = 0; i < block.length; i++) {
+            block[i].onmousedown = function (e) {
+                let curIndex = $block.index($(this))
+                let This = items[i]
+                let pos = $(this)[0].getBoundingClientRect()
+                const disX = e.pageX - pos.x
+                const disY = e.pageY - pos.y
+                const dragItem = $(this)[0].cloneNode(true)
+                dragItem.ontransitionend = function () {
+                    dragItem.ontransitionend = null
+                    This.className = 'item'
+                    document.body.removeChild(this)
+                }
+                dragItem.className += ' dragItem'
+                This.className += ' hide'
+                dragItem.style.position = 'absolute'
+                dragItem.style.width = pos.width + 'px'
+                dragItem.style.height = pos.height + 'px'
+                dragItem.style.left = pos.x + 'px'
+                dragItem.style.top = pos.y + 'px'
+                document.body.appendChild(dragItem)
+
+                $(dragItem).css('pointer-events', 'none')
+
+                let timer = null
+                let isStop = false
+                const promiseArr = []
+                $items.on('mousemove.drag', function (e) {
+                    if (isStop) return
+                    clearTimeout(timer)
+                    const $this = $(this)
+                    timer = setTimeout(() => {
+                        console.log('change')
+                        const targetIndex = $(this).index()
+                        // 获取以哪一个元素为基准
+                        const targetItemPos = $this[0].getBoundingClientRect()
+                        const middlePoint = targetItemPos.width / 2 + targetItemPos.x
+
+                        let realTargetIndex = targetIndex
+                        if (curIndex < targetIndex) {
+                            isStop = true
+                            const colsx = Number(document.body.style.getPropertyValue('--cols'));
+                            if (e.pageX < middlePoint && targetIndex % colsx !== 0) realTargetIndex--
+                            pos = $block.eq(realTargetIndex)[0].getBoundingClientRect()
+
+                            for (let i = realTargetIndex; i > curIndex; i--) {
+                                promiseArr.push(movePosByTarget($block.eq(i)[0], $items.eq(i - 1)[0], i))
+                            }
+
+                            Promise.all(promiseArr).then(() => {
+                                This.className = 'item'
+                                $block.eq(realTargetIndex).parent().addClass('hide')
+                                // 缓存当前text
+                                const cacheText = $block.eq(curIndex).text()
+                                for (let i = curIndex; i < realTargetIndex; i++) {
+                                    $block.eq(i).text($block.eq(i + 1).text())
+                                }
+                                $block.eq(realTargetIndex).text(cacheText)
+
+                                localStorage.setItem('arr', JSON.stringify(Array.from($block).map($block => {
+                                    return Number($block.innerText)
+                                })))
+                                This = $block.eq(realTargetIndex).parent()[0]
+                                curIndex = realTargetIndex
+                                isStop = false
+
+                            })
+
+                        }
+
+                        if (curIndex > targetIndex) {
+                            isStop = true
+                            const colsx = Number(document.body.style.getPropertyValue('--cols'));
+                            if (e.pageX > middlePoint && (targetIndex + 1) % colsx !== 0) realTargetIndex++
+                            pos = $block.eq(realTargetIndex)[0].getBoundingClientRect()
+
+                            for (let i = realTargetIndex; i < curIndex; i++) {
+                                promiseArr.push(movePosByTarget($block.eq(i)[0], $items.eq(i + 1)[0], i))
+                            }
+
+                            Promise.all(promiseArr).then(() => {
+                                This.className = 'item'
+                                $block.eq(realTargetIndex).parent().addClass('hide')
+                                // 缓存当前text
+                                const cacheText = $block.eq(curIndex).text()
+                                for (let i = curIndex; i > realTargetIndex; i--) {
+                                    $block.eq(i).text($block.eq(i - 1).text())
+                                }
+
+                                $block.eq(realTargetIndex).text(cacheText)
+                                localStorage.setItem('arr', JSON.stringify(Array.from($block).map($block => {
+                                    return Number($block.innerText)
+                                })))
+                                This = $block.eq(realTargetIndex).parent()[0]
+                                curIndex = realTargetIndex
+                                isStop = false
+
+                            })
+                        }
+
+
+                    }, 30);
+                })
+                $items.on('mouseout.drag', function () {
+                    clearTimeout(timer)
+                })
+
+                document.documentElement.onmousemove = function (e) {
+                    dragItem.style.left = e.pageX - disX + 'px'
+                    dragItem.style.top = e.pageY - disY + 'px'
+                }
+                document.documentElement.onmouseup = function (e) {
+                    clearTimeout(timer)
+                    $items.off('mousemove.drag mouseleave.drag')
+                    if (e.stopPropagation) e.stopPropagation();
+                    if (e.preventDefault) e.preventDefault();
+                    document.documentElement.onmouseup = document.documentElement.onmousemove = null
+                    dragItem.className += ' trs'
+                    dragItem.style.left = pos.x + 'px'
+                    dragItem.style.top = pos.y + 'px'
+
+                }
+            }
+        }
+
+
+        getPosArr()
+        function getPosArr() {
+            posArr = []
+            for (let i = 0; i < block.length; i++) posArr.push(block[i].getBoundingClientRect())
+        }
+        window.onresize = fd(getPosArr, 100)
+
+        const btns = document.getElementsByClassName('changeBtn')
+
+
+        function movePosByTarget(block, item, i, callback = () => { }) {
+            return new Promise(resolve => {
+                block.style.position = 'fixed'
+                block.style.left = posArr[i].x + 'px'
+                block.style.top = posArr[i].y + 'px'
+
+
+                // 获取当前items定位信息
+                const itemPos = item.getBoundingClientRect()
+                const blockPos = block.getBoundingClientRect()
+
+                // 目标位置
+                const targetX = itemPos.x + (itemPos.width - blockPos.width) / 2
+                const targetY = itemPos.y + (itemPos.height - blockPos.height) / 2
+
+                $(block).off('transitionend').on('transitionend', function () {
+                    resolve()
+                    $(block).removeClass('trs').css({
+                        position: '',
+                        left: '',
+                        top: '',
+                        transform: ''
+                    })
+                }).css({ transform: `` }).addClass('trs').css({
+                    transform: `translateX(${targetX - blockPos.x}px) translateY(${targetY - blockPos.y}px)`
+                })
+
+            })
+        }
+
+        for (let i = 0; i < btns.length; i++) {
+            btns[i].onclick = function () {
+                const promiseArr = []
+                getPosArr()
+                document.body.style.setProperty('--rows', this.dataset.x);
+                document.body.style.setProperty('--cols', this.dataset.y);
+                localStorage.setItem('grid', JSON.stringify({
+                    x: this.dataset.x,
+                    y: this.dataset.y
+                }))
+                for (let i = 0; i < block.length; i++) {
+                    promiseArr.push(movePosByTarget(block[i], items[i], i))
+                }
+                Promise.all(promiseArr).then(() => { getPosArr() })
+            }
+        }
+    </script>
+</body>
+
+</html>
