@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        #wrap {
+            width: 500px;
+            height: 500px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            border: 1px solid #333;
+            padding: 15px;
+        }
+
+        #edit {
+            width: 100%;
+            min-height: 100%;
+            outline: none;
+        }
+
+        .img-wrap {
+            display: inline-block;
+            max-width: 100%;
+            min-width: 1px;
+            pointer-events: none;
+        }
+
+        .img-wrap img {
+            width: 100%;
+            vertical-align: top;
+        }
+    </style>
+</head>
+
+<body>
+    <button id="btn">添加</button>
+    <div id="wrap">
+        <div id="edit" contenteditable="true">
+        </div>
+    </div>
+    <script>
+        const editor = document.getElementById('edit');
+        document.getElementById('btn').onclick = function () {
+            editor.innerHTML += `<span id="aaa" class="img-wrap" tabindex="1"> 
+                <img src="https://infinitypro-img-test.infinitynewtab.com/infinity-notes-img/60da75edd4b52f0018a946d0/note-1f9tcsdnlr4wtbr3djj8h4yu1ff.png">
+            </span>`
+            document.getElementById('aaa').focus()
+        }
+    </script>
+</body>
+
+</html>

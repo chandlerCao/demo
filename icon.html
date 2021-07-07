@@ -8,6 +8,7 @@
     <title>Document</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
     <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://www.bootcss.com/p/buttons/css/buttons.css">
     <style>
         html,
         body {
@@ -20,11 +21,15 @@
             margin: 0;
         }
 
+        .changeBtn {
+            margin: 10px;
+        }
+
         #box {
             display: grid;
             width: 1000px;
             height: 600px;
-            margin: 0 auto;
+            margin: 100px auto;
             grid-template-columns: repeat(var(--cols), calc(100% / var(--cols)));
             grid-template-rows: repeat(var(--rows), calc(100% / var(--rows)));
         }
@@ -62,7 +67,8 @@
 
 <body>
     <div id="wrap">
-        <button v-for="pos in btns" class="changeBtn" :data-x="pos.x" :data-y="pos.y">{{pos.x}}*{{pos.y}}</button>
+        <!-- button button-3d button-primary button-caution -->
+        <button v-for="pos in btns" :data-x="pos.x" :data-y="pos.y" class="changeBtn ">{{pos.x}}*{{pos.y}}</button>
         <div id="box">
             <div v-for="item in list" class="item" :id="`item${item}`">
                 <div class="block">{{item}}</div>
@@ -127,9 +133,8 @@
                 dragItem.style.height = pos.height + 'px'
                 dragItem.style.left = pos.x + 'px'
                 dragItem.style.top = pos.y + 'px'
+                dragItem.style.pointerEvents = 'none'
                 document.body.appendChild(dragItem)
-
-                $(dragItem).css('pointer-events', 'none')
 
                 let timer = null
                 let isStop = false
@@ -215,10 +220,8 @@
                 })
 
                 document.documentElement.onmousemove = function (e) {
-                    requestAnimationFrame(() => {
-                        dragItem.style.left = e.pageX - disX + 'px'
-                        dragItem.style.top = e.pageY - disY + 'px'
-                    })
+                    dragItem.style.left = e.pageX - disX + 'px'
+                    dragItem.style.top = e.pageY - disY + 'px'
                 }
                 document.documentElement.onmouseup = function (e) {
                     clearTimeout(timer)
